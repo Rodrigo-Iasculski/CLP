@@ -1,0 +1,625 @@
+<!DOCTYPE html>
+<html lang="PT-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Multithreading em C++</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #222;
+            line-height: 1.6;
+            overflow-x: hidden;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 20px;
+        }
+
+        header {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+            padding: 1rem 0;
+            position: fixed;
+            width: 100%;
+            top: 0;
+            z-index: 1000;
+            transition: all 0.3s ease;
+        }
+
+        nav {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo {
+            font-size: 1.8rem;
+            font-weight: bold;
+            color: white;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .nav-links {
+            display: flex;
+            list-style: none;
+            gap: 2rem;
+        }
+
+        .nav-links a {
+            color: white;
+            text-decoration: none;
+            transition: all 0.3s ease;
+            padding: 0.5rem 1rem;
+            border-radius: 25px;
+        }
+
+        .nav-links a:hover {
+            background: rgba(255, 255, 255, 0.2);
+            transform: translateY(-2px);
+        }
+
+        main {
+            margin-top: 80px;
+            min-height: 100vh;
+        }
+
+        .hero {
+            text-align: center;
+            padding: 4rem 0;
+            color: white;
+        }
+
+        .hero h1 {
+            font-size: 3.5rem;
+            margin-bottom: 1rem;
+            text-shadow: 0 4px 8px rgba(0,0,0,0.3);
+            animation: fadeInUp 1s ease-out;
+        }
+
+        .hero p {
+            font-size: 1.3rem;
+            margin-bottom: 2rem;
+            opacity: 0.9;
+            animation: fadeInUp 1s ease-out 0.2s both;
+        }
+
+        .cta-button {
+            display: inline-block;
+            background: linear-gradient(45deg, #ff6b6b, #feca57);
+            color: white;
+            padding: 1rem 2rem;
+            text-decoration: none;
+            border-radius: 50px;
+            font-weight: bold;
+            transition: all 0.3s ease;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.2);
+            animation: fadeInUp 1s ease-out 0.4s both;
+        }
+
+        .cta-button:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 15px 30px rgba(0,0,0,0.3);
+        }
+
+        .features {
+            padding: 4rem 0;
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            margin: 2rem 0;
+            border-radius: 20px;
+        }
+
+        .features-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 2rem;
+        }
+
+        .feature-card {
+            background: rgba(255, 255, 255, 0.9);
+            padding: 2rem;
+            border-radius: 15px;
+            text-align: center;
+            transition: all 0.3s ease;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+        }
+
+        .feature-card:hover {
+            transform: translateY(-10px);
+            box-shadow: 0 20px 40px rgba(0,0,0,0.2);
+        }
+
+        .feature-icon {
+            width: 60px;
+            height: 60px;
+            margin: 0 auto 1rem;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            background: linear-gradient(45deg, #667eea, #764ba2);
+        }
+
+        .thread-icon::before {
+            content: '';
+            width: 8px;
+            height: 30px;
+            background: white;
+            border-radius: 4px;
+            box-shadow: 12px 0 white, -12px 0 white;
+        }
+
+        .async-icon::before {
+            content: '';
+            width: 0;
+            height: 0;
+            border-left: 15px solid white;
+            border-top: 10px solid transparent;
+            border-bottom: 10px solid transparent;
+        }
+
+        .async-icon::after {
+            content: '';
+            position: absolute;
+            width: 20px;
+            height: 3px;
+            background: white;
+            right: 10px;
+            border-radius: 2px;
+        }
+
+        .lock-icon::before {
+            content: '';
+            width: 20px;
+            height: 15px;
+            border: 3px solid white;
+            border-radius: 3px 3px 0 0;
+            border-bottom: none;
+        }
+
+        .lock-icon::after {
+            content: '';
+            position: absolute;
+            bottom: 15px;
+            width: 26px;
+            height: 18px;
+            background: white;
+            border-radius: 3px;
+        }
+
+        .new-icon::before {
+            content: '';
+            width: 25px;
+            height: 25px;
+            background: white;
+            clip-path: polygon(20% 0%, 0% 20%, 30% 50%, 0% 80%, 20% 100%, 50% 70%, 80% 100%, 100% 80%, 70% 50%, 100% 20%, 80% 0%, 50% 30%);
+        }
+
+        .coroutine-icon::before {
+            content: '';
+            width: 30px;
+            height: 30px;
+            border: 3px solid white;
+            border-radius: 50%;
+            border-left-color: transparent;
+            animation: spin 2s linear infinite;
+        }
+
+        .coroutine-icon::after {
+            content: '';
+            position: absolute;
+            width: 20px;
+            height: 20px;
+            border: 3px solid white;
+            border-radius: 50%;
+            border-right-color: transparent;
+            animation: spin 1.5s linear infinite reverse;
+        }
+
+        .pool-icon::before {
+            content: '';
+            width: 8px;
+            height: 8px;
+            background: white;
+            border-radius: 50%;
+            box-shadow: 15px 0 white, -15px 0 white, 7px 12px white, -7px 12px white, 0 -12px white;
+        }
+/*
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+*/
+        .pulse {
+            animation: pulse 20s infinite;
+        }
+
+        .code-section {
+            background: #1e1e1e;
+            color: #fff;
+            padding: 3rem 0;
+            margin: 2rem 0;
+            border-radius: 20px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .code-section::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(45deg, rgba(102, 126, 234, 0.1), rgba(118, 75, 162, 0.1));
+            pointer-events: none;
+        }
+
+        .code-container {
+            position: relative;
+            z-index: 1;
+        }
+
+        .code-block {
+            background: #2d2d2d;
+            padding: 2rem;
+            border-radius: 10px;
+            border-left: 4px solid #ff6b6b;
+            margin: 1rem 0;
+            overflow-x: auto;
+            font-family: 'Courier New', monospace;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.3);
+        }
+
+        .code-block pre {
+            margin: 0;
+            color: #f8f8f2;
+        }
+
+        .keyword { color: #ff79c6; }
+        .string { color: #f1fa8c; }
+        .comment { color: #6272a4; }
+        .function { color: #50fa7b; }
+
+        .comparison-table {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 15px;
+            overflow: hidden;
+            margin: 2rem 0;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th {
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            color: white;
+            padding: 1rem;
+            text-align: left;
+        }
+
+        td {
+            padding: 1rem;
+            border-bottom: 1px solid #eee;
+        }
+
+        tr:hover {
+            background: rgba(102, 126, 234, 0.1);
+        }
+
+        .footer {
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            text-align: center;
+            padding: 2rem 0;
+            margin-top: 4rem;
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+/*
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+*/
+        .pulse {
+            animation: pulse 2s infinite;
+        }
+
+        @media (max-width: 768px) {
+            .hero h1 {
+                font-size: 2.5rem;
+            }
+            
+            .nav-links {
+                display: none;
+            }
+            
+            .features-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .scroll-indicator {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 0%;
+            height: 4px;
+            background: linear-gradient(45deg, #ff6b6b, #feca57);
+            z-index: 9999;
+            transition: width 0.1s ease;
+        }
+    </style>
+</head>
+<body>
+    <div class="scroll-indicator" id="scrollIndicator"></div>
+    
+    <header>
+        <nav class="container">
+            <div class="logo">Multithreading em C++</div>
+            <ul class="nav-links">
+                <!--<li><a href="#features">Recursos</a></li>-->
+                <li><a href="#examples">Exemplos</a></li>
+                <li><a href="#comparison">Comparação</a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <section id="home" class="hero">
+            <div class="container">
+                <h1>Multithreading em C++</h1>
+                <p>Sistemas concorrentes de máxima perfomance com controle total sobre recursos. C++ oferece controle total sobre threads, memória e sincronização. Sua experiência define os limites, não o compilador</p>
+                <a href="#features" class="cta-button">Recursos</a>
+            </div>
+        </section>
+
+        <section id="features" class="features">
+            <div class="container">
+                <h2 style="text-align: justify; color: white; margin-bottom: 3rem; font-size: 2.5rem;">Recursos de Threading</h2>
+                <div class="features-grid">
+                    <div class="feature-card">
+                        <div class="feature-icon thread-icon"></div>
+                        <h3>std::thread</h3>
+                        <p style="text-align: justify;">Criação básica de threads e gerenciamento com controle total sobre o ciclo de vida e execução.
+Permite iniciar tarefas em paralelo, controlar quando começam e terminam, e coordenar a execução de diferentes partes de um programa. Com std::thread, é possível criar aplicações mais responsivas e aproveitar melhor processadores com múltiplos núcleos.</p>
+                    </div>
+                    <div class="feature-card">
+                        <div class="feature-icon async-icon pulse"></div>
+                        <h3>std::async</h3>
+                        <p style="text-align: justify;">Permite executar funções em segundo plano sem precisar gerenciar explicitamente threads, simplificando o código e reduzindo a possibilidade de erros. Ao utilizar std::async, é possível obter resultados de forma assíncrona por meio de objetos std::future, garantindo que o processamento pesado não bloqueie a execução principal do programa. É ideal para operações independentes que podem ser processadas em paralelo.</p>
+                    </div>
+                    <div class="feature-card">
+                        <div class="feature-icon lock-icon"></div>
+                        <h3>Sincronização</h3>
+                        <p style="text-align: justify;">Mutexes, variáveis de condição e operações atômicas para programação thread-safe.
+A sincronização é essencial quando múltiplas threads acessam e modificam os mesmos recursos. Com ferramentas como std::mutex, std::condition_variable e operações atômicas (std::atomic), é possível coordenar o acesso, evitando conflitos e garantindo a integridade dos dados.</p>
+                    </div>
+                    <div class="feature-card">
+                        <div class="feature-icon new-icon"></div>
+                        <h3>std::jthread</h3>
+                        <p style="text-align: justify;">Uma versão melhorada no C++20 com limpeza automática e cancelamento cooperativo.
+ std::jthread facilita o gerenciamento de threads ao encerrar automaticamente sua execução no destrutor, evitando esquecimentos e vazamentos de recursos. Além disso, oferece suporte integrado para cancelamento cooperativo por meio de std::stop_token, permitindo que threads sejam interrompidas de forma segura e previsível.Essa abordagem reduz a complexidade do código e torna a programação concorrente mais robusta e menos propensa a erros.</p>
+                    </div>
+                    <div class="feature-card">
+                        <div class="feature-icon coroutine-icon"></div>
+                        <h3>Corrotinas</h3>
+                        <p style="text-align: justify;">Corrotinas do C++20 para multitarefa cooperativa leve e programação assíncrona.
+As corrotinas permitem pausar e retomar funções em pontos específicos, possibilitando a escrita de código assíncrono de forma mais clara e linear. Com o C++20, a linguagem oferece suporte nativo a esse recurso, facilitando a criação de pipelines de processamento, geradores de dados e sistemas de multitarefa leve. Diferente das threads tradicionais, corrotinas não exigem troca de contexto no nível do sistema operacional, tornando sua execução mais rápida e com menor consumo de recursos. </p>
+                    </div>
+                    <div class="feature-card">
+                        <div class="feature-icon pool-icon"></div>
+                        <h3>Thread Pools</h3>
+                        <p style="text-align: justify;">Gerenciamento eficiente de recursos com worker threads reutilizáveis para melhor performance.
+Um thread pool é um conjunto de threads previamente criadas que permanecem disponíveis para executar múltiplas tarefas ao longo da vida útil do programa. Em vez de criar e destruir threads para cada operação , o thread pool reutiliza as mesmas threads, reduzindo a sobrecarga e melhorando a eficiência. Essa abordagem é ideal para aplicações que processam um grande número de tarefas curtas ou de média duração, garantindo melhor uso dos recursos do sistema e maior previsibilidade na execução.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="examples" class="code-section">
+            <div class="container code-container">
+                <h2 style="text-align: center; margin-bottom: 2rem; font-size: 2.5rem;">Alguns Exemplos de Código</h2>
+                
+                <div class="code-block">
+                    <pre><code><span class="keyword">#include</span> <span class="string">&lt;thread&gt;</span>
+<span class="keyword">#include</span> <span class="string">&lt;iostream&gt;</span>
+
+<span class="keyword">using namespace</span> <span class="function">trabalhador</span>(<span class="keyword">int</span> id) {
+    std::<span class="function">cout</span> &lt;&lt; <span class="string">"Thread "</span> &lt;&lt; id &lt;&lt; <span class="string">" trabalhando\n"</span>;
+}
+
+<span class="keyword">int</span> <span class="function">main</span>() {
+    std::<span class="function">thread</span> t1(trabalhador, 1);
+    std::<span class="function">thread</span> t2(trabalhador, 2);
+    
+    t1.<span class="function">join</span>();
+    t2.<span class="function">join</span>();
+    <span class="keyword">return</span> 0;
+}</code></pre>
+                </div>
+
+                <h3 style="color: #ff6b6b; margin: 2rem 0 1rem 0;">Operações Assíncronas</h3>
+                <div class="code-block">
+<pre><code>
+<span class="keyword">#include</span> <span class="string">&lt;chrono&gt;</span>
+<span class="keyword">#include</span> <span class="string">&lt;future&gt;</span>
+<span class="keyword">#include</span> <span class="string">&lt;iostream&gt;</span>
+<span class="keyword">using namespace</span> <span class="keyword">std</span>;
+
+<span class="type">int</span> <span class="function">returnTwo</span>() { <span class="keyword">return</span> <span class="number">2</span>; }
+
+<span class="type">int</span> <span class="function">main</span>()
+{
+    <span class="comment">// Criando um objeto futuro e a thread que executa</span>
+    <span class="comment">// A função retorna dois de forma assíncrona</span>
+    <span class="type">future</span>&lt;<span class="type">int</span>&gt; f = <span class="function">async</span>(<span class="type">launch</span>::async, <span class="function">returnTwo</span>);
+
+    <span class="comment">// Pegando e printando o resultado</span>
+    <span class="function">cout</span> &lt;&lt; f.<span class="function">get</span>();
+
+    <span class="keyword">return</span> <span class="number">0</span>;
+}
+</code></pre>
+                </div>
+
+                <h3 style="color: #ff6b6b; margin: 2rem 0 1rem 0;">jthread Moderno (C++20)</h3>
+                <div class="code-block">
+<pre><code>
+<span class="keyword">#include</span> <span class="string">&lt;iostream&gt;</span>
+<span class="keyword">#include</span> <span class="string">&lt;thread&gt;</span>
+<span class="keyword">#include</span> <span class="string">&lt;stop_token&gt;</span>
+
+<span class="keyword">void</span> <span class="function">foo</span>(std::<span class="type">stop_token</span> stoken) {
+    <span class="comment">// Função que será executada na thread, recebe um token para saber quando parar</span>
+    <span class="keyword">while</span> (!stoken.<span class="function">stop_requested</span>()) {  
+        std::<span class="function">cout</span> &lt;&lt; <span class="string">"Running\n"</span>;
+        std::this_thread::<span class="function">sleep_for</span>(std::chrono::seconds(<span class="number">1</span>));  <span class="comment">// Espera 1 segundo</span>
+    }
+}
+
+<span class="keyword">int</span> <span class="function">main</span>() {
+    std::<span class="type">jthread</span> t(<span class="function">foo</span>);  <span class="comment">// Cria uma jthread que executa a função foo, passando automaticamente o stop_token</span>
+
+    std::this_thread::<span class="function">sleep_for</span>(std::chrono::seconds(<span class="number">5</span>)); 
+
+    t.<span class="function">request_stop</span>();  
+
+    t.<span class="function">join</span>();          <span class="comment">// Aguarda a thread foo finalizar antes de continuar</span>
+    <span class="keyword">return</span> <span class="number">0</span>;
+}
+</code></pre>
+                </div>
+            </div>
+        </section>
+
+        <section id="comparison" class="container">
+            <h2 style="text-align: center; color: white; margin: 3rem 0; font-size: 2.5rem;">Comparação Entre Linguagens</h2>
+            <div class="comparison-table">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Recurso</th>
+                            <th>C++</th>
+                            <th>Go</th>
+                            <th>Rust</th>
+                            <th>Elixir</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><strong>Tarefas Leves</strong></td>
+                            <td>Não (threads do SO)</td>
+                            <td>Sim (goroutines)</td>
+                            <td>Não (threads do SO)</td>
+                            <td>Sim (processos)</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Segurança de Memória</strong></td>
+                            <td>Manual</td>
+                            <td>GC + Manual</td>
+                            <td>Compile-time</td>
+                            <td>Runtime</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Performance</strong></td>
+                            <td>Máxima</td>
+                            <td>Alta</td>
+                            <td>Máxima</td>
+                            <td>Boa</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Modelo de Concorrência</strong></td>
+                            <td>Memória Compartilhada</td>
+                            <td>CSP (Canais)</td>
+                            <td>Ownership</td>
+                            <td>Modelo Actor</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    </main>
+
+    <footer class="footer">
+        <div class="container">
+
+        </div>
+    </footer>
+
+    <script>
+        // Smooth scrolling for navigation links
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                e.preventDefault();
+                const target = document.querySelector(this.getAttribute('href'));
+                if (target) {
+                    target.scrollIntoView({
+                        behavior: 'smooth',
+                        block: 'start'
+                    });
+                }
+            });
+        });
+
+        // Scroll progress indicator
+        window.addEventListener('scroll', () => {
+            const winScroll = document.body.scrollTop || document.documentElement.scrollTop;
+            const height = document.documentElement.scrollHeight - document.documentElement.clientHeight;
+            const scrolled = (winScroll / height) * 100;
+            document.getElementById('scrollIndicator').style.width = scrolled + '%';
+        });
+
+        // Header background on scroll
+        window.addEventListener('scroll', () => {
+            const header = document.querySelector('header');
+            if (window.scrollY > 100) {
+                header.style.background = 'rgba(0, 0, 0, 0.9)';
+            } else {
+                header.style.background = 'rgba(255, 255, 255, 0.1)';
+            }
+        });
+
+        // Add animation to feature cards on scroll
+        const observerOptions = {
+            threshold: 0.1,
+            rootMargin: '0px 0px -50px 0px'
+        };
+
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.style.animation = 'fadeInUp 0.6s ease-out forwards';
+                }
+            });
+        }, observerOptions);
+
+        document.querySelectorAll('.feature-card').forEach(card => {
+            observer.observe(card);
+        });
+    </script>
+</body>
+</html>
